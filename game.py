@@ -7,7 +7,7 @@ from pgzero.builtins import keyboard
 
 
 # Initial Configuration
-WIDTH = 800
+WIDTH = 1200
 HEIGHT = 600
 MOVIMENT = 1
 COIN_TIMER = 1000
@@ -31,6 +31,7 @@ grass = Actor('grass')
 
 # arvores, cogumelos e moedas
 tree = Actor('tree')
+tree2 = Actor('tree2')
 mushroom = Actor('mushroom')
 coin = Actor('coin')
 
@@ -43,12 +44,24 @@ grass.height = 16
 tree_positions = []
 coin_positions = []
 
-while len(tree_positions) < 150:
+while len(tree_positions) < ((WIDTH + HEIGHT)//2) * 0.12:
     position = (random.randint(0, WIDTH), random.randint(0, HEIGHT))
     
     # se a posição gerada não estiver na lista, adiciona
     if position not in tree_positions and position != (lumberjack.x, lumberjack.y):
-        tree_positions.append(position)
+        
+        # para evitar choques entre árvores, verifica se as árvores ficam a pelo menos 16 pixels de distância
+        too_close = False
+        for pos in tree_positions:
+
+            # Observe que usar hypot é mais preciso porque define a distância euclidiana
+            # dos pontos calculados.
+            if math.hypot(position[0] - pos[0], position[1] - pos[1]) < 32:
+                too_close = True
+                break
+        
+        if not too_close:
+            tree_positions.append(position)
 
 while len(coin_positions) < 20:
     position = (random.randint(0, WIDTH), random.randint(0, HEIGHT))
@@ -77,6 +90,8 @@ def draw():
     # desenha árvores em posições aleatórias
     for x in tree_positions:
         tree.pos = (x)
+        tree2.pos = (x[0], x[1] - 16)
+        tree2.draw()
         tree.draw()
 
     # desenha o lenhador
@@ -89,9 +104,9 @@ def draw():
         coin.draw()
 
     # Desenha o contador de moedas
-    screen.draw.text(f"Moedas: {coins_collected}", (10, 10), color="yellow", fontsize=40)
-
-
+    screen.draw.text(f"Moedas: {coins_collected}", (10, 10), color="yellow", fontsize=20)
+    screen.draw.text(f"velocidade: {speed:.2f}", (10, 30), color="yellow", fontsize=20)
+    screen.draw.text(f"timer coin: {coin_timer}", (10, 50), color="yellow", fontsize=20)
     
     
 
@@ -106,7 +121,7 @@ def update():
     original_y = lumberjack.y
 
 
-
+    # Movimentação do lenhador
     global speed
     if keyboard.left:
         lumberjack.x -= speed
@@ -117,6 +132,7 @@ def update():
     if keyboard.down:
         lumberjack.y += speed
 
+
     # Checa colisão com árvores
     for pos in tree_positions:
         tree.pos = pos
@@ -125,6 +141,7 @@ def update():
             lumberjack.x = original_x
             lumberjack.y = original_y
             break
+
 
     # limite da movimentação do lenhador
     if lumberjack.x < 0:
@@ -146,13 +163,12 @@ def update():
         fix_position_coin = random.randint(0, len(coin_positions) - 1)
 
 
-    # Checa colisão com a moeda
     # Checa colisão com a moeda (só conta uma vez por moeda)
     if coin_timer > 0 and lumberjack.colliderect(coin):
         coins_collected += 1
         coin_timer = 0  # Faz a moeda desaparecer
-        speed += 0.1  # Aumenta a velocidade do lenhador a cada moeda coletada
-        COIN_TIMER -= 1 # Diminui o tempo da moeda a cada moeda coletada
+        speed += 0.04  # Aumenta a velocidade do lenhador a cada moeda coletada
+        COIN_TIMER -= 10 # Diminui o tempo da moeda a cada moeda coletada
         # Move a moeda para fora da tela para evitar múltiplas colisões no mesmo frame
         coin.pos = (-100, -100)
 
