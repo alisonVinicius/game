@@ -107,7 +107,7 @@ while len(tree_positions) < int( ((WIDTH + HEIGHT)//2) * 0.12):
     position = (random.randint(16, WIDTH), random.randint(32, HEIGHT - 16))
     
     # se a posição gerada não estiver na lista, adiciona
-    if position not in tree_positions and position != ((WIDTH  // 2) + 32, (HEIGHT// 2 ) + 32):
+    if position not in tree_positions and position != (WIDTH  // 2, HEIGHT// 2):
         
         # para evitar choques entre árvores, verifica se as árvores ficam a pelo menos 16 pixels de distância
         too_close = False
@@ -132,7 +132,7 @@ while len(coin_positions) < 200:
         coin_positions.append(position)
     
 
-while len(enemy) < 50:
+while len(enemy) < 20:
     position = (random.randint(0, WIDTH), random.randint(0, HEIGHT))
     
     # se a posição gerada não estiver na lista de árvores e nem na lista de moedas, adiciona
@@ -152,7 +152,7 @@ coin.pos = random.choice(coin_positions)
 menu_active = True
 menu_items = [
     {"text": "Começar Jogo", "action": "start_game"},
-    {"text": "Música e sons", "action": "option_sound"},
+    {"text": "Música e sons : On", "action": "option_sound"},
     {"text": "Sair", "action": "exit_game"}]
 selected_menu = 0
 
