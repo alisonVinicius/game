@@ -19,11 +19,71 @@ class Enemy(Actor):
 
 
 
+
+class Axe(Actor):
+    def __init__(self, owner, radius):
+        super().__init__('axe', owner.pos)
+        self.owner = owner  # O ator que "lançou" o machado (o lenhador)
+        self.radius = radius # Distância do machado em relação ao centro do lenhador
+        self.angle = 0 # Ângulo inicial de rotação
+        self.rotation_speed = 5 # Velocidade de rotação
+    
+    def update(self):
+        # Atualiza o ângulo
+        self.angle += self.rotation_speed
+        
+        # Calcula a nova posição X e Y usando trigonometria
+        # O centro de rotação é a posição do lenhador (self.owner.pos)
+        self.x = self.owner.x + self.radius * math.cos(math.radians(self.angle))
+        self.y = self.owner.y + self.radius * math.sin(math.radians(self.angle))
+
+
+
+
 class Lumberjack(Actor):
 
-    def __init__ (self, pos):
+    def __init__ (self, pos, speed):
         super().__init__('lumberjack', pos)
         self.life = 3
+        self.speed = speed
+        self.attack_timer = 50
+        self.is_attacking = False
+        self.axe = False
+
+
+    def attack(self):
+        if not self.is_attacking:
+            self.is_attacking = True
+            # Cria uma instância da classe Axe
+            self.axe = Axe(self, 50) # O '50' é o raio da rotação
+            self.axe.draw()
+
+
+    def update(self):
+        # Lógica de Movimento
+        if keyboard.left:
+            self.x -= self.speed
+        if keyboard.right:
+            self.x += self.speed
+        if keyboard.up:
+            self.y -= self.speed
+        if keyboard.down:
+            self.y += self.speed
+
+        # Lógica de Ataque
+        if keyboard.z:
+            self.attack()
+
+            # Gerenciamento do Ataque (temporizador e atualização do machado)
+            if self.is_attacking:
+                if self.axe:
+                    self.axe.update()
+
+                if self.attack_timer <= 0:
+                    self.is_attacking = False
+                    self.axe = None
+                    self.attack_timer = 200
+
 
     def lostLife(self):
         self.life -= 1
@@ -68,7 +128,6 @@ WIDTH      = 800      # Tamanho da janela do jogo
 HEIGHT     = 600       # Tamanho da janela do jogo
 MOVIMENT   = 1         # Velocidade inicial do lenhador
 COIN_TIMER = 1000      # Tempo inicial que a moeda fica na tela (em frames)
-speed      = MOVIMENT  # Velocidade inicial do lenhador
 sound_on   = True      # Variável para controlar o som
 enemy_speed = 0.2    # Velocidade do inimigo
 
@@ -85,7 +144,7 @@ enemy_speed = 0.2    # Velocidade do inimigo
 
 
 # Lenhador
-lumberjack = Lumberjack((WIDTH // 2, HEIGHT // 2))
+lumberjack = Lumberjack((WIDTH // 2, HEIGHT // 2), MOVIMENT)
 
 
 # gramas
@@ -178,6 +237,10 @@ def draw_game():
         # desenha o lenhador
         lumberjack.draw()
 
+        if lumberjack.axe:
+            lumberjack.axe.draw()
+
+
         # desenha a moeda
         coin.draw()
 
@@ -185,9 +248,10 @@ def draw_game():
         for en in enemy:
             en.draw()
 
+
         # Desenha o contador de moedas
         screen.draw.text(f"Moedas: {coins_collected}", (10, 10), color="yellow", fontsize=20)
-        screen.draw.text(f"velocidade: {speed:.2f}", (10, 30), color="yellow", fontsize=20)
+        screen.draw.text(f"velocidade: {lumberjack.speed:.2f}", (10, 30), color="yellow", fontsize=20)
         screen.draw.text(f"timer coin: {coin_timer}", (10, 50), color="yellow", fontsize=20)
         
 
@@ -202,7 +266,12 @@ def draw():
             coler = "red" if idx == selected_menu else "white" # muda a cor do item selecionado
             text = item["text"]
             if item["action"] == "option_sound":
-                text += f"Música e sons: {'On' if sound_on else 'Off'}"
+                if sound_on:
+                    text = "Música e sons : On"
+                else:
+                    text = "Música e sons : Off"
+
+
             screen.draw.text(item["text"], center=(WIDTH // 2, HEIGHT // 2 + idx * 40), fontsize=40, color=coler)
     else:
        draw_game()
@@ -226,16 +295,7 @@ def update_game():
 
 
     # Movimentação do lenhador
-    global speed
-    if keyboard.left:
-        lumberjack.x -= speed
-    if keyboard.right:
-        lumberjack.x += speed
-    if keyboard.up:
-        lumberjack.y -= speed
-    if keyboard.down:
-        lumberjack.y += speed
-
+    lumberjack.update()
 
     # Movimentação do inimigo (Vai atrás do lenhador)
     for en in enemy:
@@ -281,8 +341,14 @@ def update_game():
         if lumberjack.colliderect(en):
             lumberjack.lostLife()
             lumberjack.pos = (WIDTH // 2, HEIGHT //2 )
+            lumberjack.speed -= 0.01 
             en.speed += 0.01
             en.pos = en.originalPos
+
+        if lumberjack.axe:
+            if lumberjack.axe.colliderect(en):
+                 en.speed += 0.001
+                 en.pos = en.originalPos
 
 
         
@@ -324,7 +390,7 @@ def update_game():
     if coin_timer > 0 and not coin.collected and lumberjack.colliderect(coin):
         coins_collected += 1
         coin.collected = True
-        speed += 0.04
+        lumberjack.speed += 0.2
         coin_timer = 0
         COIN_TIMER -= 5
         if COIN_TIMER < 200:
@@ -349,13 +415,10 @@ def on_key_down(key):
             elif action == "option_sound":
                 if sound_on:
                     sound_on = False
-                    music.stop()
+
                 else:
                     sound_on = True
-                    music.play('')
-   
 
-        # Permite pausar o jogo e voltar ao menu pressionando ESC
 
 
     if keyboard.escape:
