@@ -17,7 +17,26 @@ class Enemy(Actor):
         self.x = self.originalPos[0]
         self.y = self.originalPos[1]
 
+    def moveTowards(self, target):
 
+        if self.x < target.x:
+            self.x += self.speed
+        elif self.x > target.x:
+            self.x -= self.speed
+        if self.y < target.y:
+            self.y += self.speed
+        elif self.y > target.y:
+            self.y -= self.speed   
+
+    def moveAwayTree(self, tree):
+        # Empurra o inimigo para longe da árvore
+        dx = self.x - tree.x
+        dy = self.y - tree.y
+        dist = math.hypot(dx, dy)
+        if dist == 0:
+            dist = 1
+        self.x += (dx / dist) * self.speed * 5  
+        self.y += (dy / dist) * self.speed * 5     
 
 
 class Axe(Actor):
@@ -27,6 +46,7 @@ class Axe(Actor):
         self.radius = radius # Distância do machado em relação ao centro do lenhador
         self.angle = 0 # Ângulo inicial de rotação
         self.rotation_speed = 5 # Velocidade de rotação
+        self.soundCooldown = 0
     
     def update(self):
         # Atualiza o ângulo
@@ -36,6 +56,15 @@ class Axe(Actor):
         # O centro de rotação é a posição do lenhador (self.owner.pos)
         self.x = self.owner.x + self.radius * math.cos(math.radians(self.angle))
         self.y = self.owner.y + self.radius * math.sin(math.radians(self.angle))
+
+
+        
+
+        if sound_on and self.soundCooldown == 0:
+            sounds.axe.play()
+            self.soundCooldown = 10
+        else:
+            self.soundCooldown -= 1
 
 
 
@@ -49,6 +78,7 @@ class Lumberjack(Actor):
         self.attack_timer = 50
         self.is_attacking = False
         self.axe = False
+        self.stepCooldown = 0
 
 
     def attack(self):
@@ -60,15 +90,22 @@ class Lumberjack(Actor):
 
 
     def update(self):
+
+        moved = False
+
         # Lógica de Movimento
         if keyboard.left:
             self.x -= self.speed
+            moved = True
         if keyboard.right:
             self.x += self.speed
+            moved = True
         if keyboard.up:
             self.y -= self.speed
+            moved = True
         if keyboard.down:
             self.y += self.speed
+            moved = True
 
         # Lógica de Ataque
         if keyboard.z:
@@ -83,6 +120,14 @@ class Lumberjack(Actor):
                     self.is_attacking = False
                     self.axe = None
                     self.attack_timer = 200
+
+
+        if self.stepCooldown > 0:
+            self.stepCooldown -= 1
+
+        if moved and sound_on and self.stepCooldown == 0:
+            sounds.step.play()
+            self.stepCooldown = 30
 
 
     def lostLife(self):
@@ -132,6 +177,9 @@ sound_on   = True      # Variável para controlar o som
 enemy_speed = 0.2    # Velocidade do inimigo
 
 
+# Música do jogo
+
+music.play('music')
 
 # Game Objects
 # O mapa será constituido de gramas.
@@ -166,7 +214,7 @@ while len(tree_positions) < int( ((WIDTH + HEIGHT)//2) * 0.12):
     position = (random.randint(16, WIDTH), random.randint(32, HEIGHT - 16))
     
     # se a posição gerada não estiver na lista, adiciona
-    if position not in tree_positions and position != (WIDTH  // 2, HEIGHT// 2):
+    if position not in tree_positions and position != ((WIDTH  // 2) - 65, (HEIGHT// 2)  - 65):
         
         # para evitar choques entre árvores, verifica se as árvores ficam a pelo menos 16 pixels de distância
         too_close = False
@@ -195,7 +243,7 @@ while len(enemy) < 20:
     position = (random.randint(0, WIDTH), random.randint(0, HEIGHT))
     
     # se a posição gerada não estiver na lista de árvores e nem na lista de moedas, adiciona
-    if position not in tree_positions and position not in coin_positions:
+    if position not in tree_positions and position not in coin_positions and position != ((WIDTH  // 2) + 65, (HEIGHT// 2)  + 65):
         enemy.append(Enemy(position))
         
 
@@ -216,8 +264,13 @@ menu_items = [
 selected_menu = 0
 
 
+
+
 def draw_game():
-    
+       
+        
+        
+        
         # Desenha o mesmo ator muitas vezes para preencher o fundo
         # Mais simples para preencher o fundo do que criar um  ator
         # para cada posição. Também funciona pelo fato da grama 
@@ -253,12 +306,12 @@ def draw_game():
         screen.draw.text(f"Moedas: {coins_collected}", (10, 10), color="yellow", fontsize=20)
         screen.draw.text(f"velocidade: {lumberjack.speed:.2f}", (10, 30), color="yellow", fontsize=20)
         screen.draw.text(f"timer coin: {coin_timer}", (10, 50), color="yellow", fontsize=20)
-        
+        screen.draw.text("[ESC] MENU", (WIDTH - 160, 10), color="white", fontsize=28)
+
 
 
 def draw():
 
-    global menu_active
     if menu_active:
         screen.fill((0, 128, 0))
         screen.draw.text("Lumberjack Game", center=(WIDTH // 2, HEIGHT // 4), fontsize=60, color="white")
@@ -272,7 +325,12 @@ def draw():
                     text = "Música e sons : Off"
 
 
-            screen.draw.text(item["text"], center=(WIDTH // 2, HEIGHT // 2 + idx * 40), fontsize=40, color=coler)
+            screen.draw.text(text, center=(WIDTH // 2, HEIGHT // 2 + idx * 40), fontsize=40, color=coler)
+
+         # Desenha instruções de movimentação e ataque
+        screen.draw.text("Movimento: Setas do teclado", (10, HEIGHT - 60), color="white", fontsize=30)
+        screen.draw.text("Ataque: Tecla Z", (10, HEIGHT - 35), color="white", fontsize=30)
+
     else:
        draw_game()
         
@@ -287,7 +345,6 @@ def update_game():
 
 
 
-    # define a movimentação do lenhador
 
     # Salva a posição original
     original_x = lumberjack.x
@@ -305,42 +362,21 @@ def update_game():
         # Desvia inimigos das árvores
         for tree in trees:
             if en.colliderect(tree):
-                if en.x < tree.x:
-                    en.x -= en.speed
-                elif en.x > tree.x:
-                    en.x += en.speed
-                if en.y < tree.y:
-                    en.y -= en.speed
-                elif en.y > tree.y:
-                    en.y += en.speed
+                en.moveAwayTree(tree)
 
         # Desvia inimigos entre si
         for other_en in enemy:
             if en != other_en and en.colliderect(other_en):
-                if en.x < other_en.x:
-                    en.x -= en.speed
-                elif en.x > other_en.x:
-                    en.x += en.speed
-                if en.y < other_en.y:
-                    en.y -= en.speed
-                elif en.y > other_en.y:
-                    en.y += en.speed
+                en.moveTowards(other_en)
 
         # direcionando o inimigo para o lenhador
-        if en.x < lumberjack.x:
-            en.x += en.speed
-        elif en.x > lumberjack.x:
-            en.x -= en.speed
-        if en.y < lumberjack.y:
-            en.y += en.speed
-        elif en.y > lumberjack.y:
-            en.y -= en.speed
+        en.moveTowards(lumberjack)
 
 
         # Colisão com o lenhador
         if lumberjack.colliderect(en):
             lumberjack.lostLife()
-            lumberjack.pos = (WIDTH // 2, HEIGHT //2 )
+            lumberjack.pos = (WIDTH // 2, HEIGHT //2)
             lumberjack.speed -= 0.01 
             en.speed += 0.01
             en.pos = en.originalPos
@@ -349,6 +385,8 @@ def update_game():
             if lumberjack.axe.colliderect(en):
                  en.speed += 0.001
                  en.pos = en.originalPos
+                 if sound_on:
+                    sounds.enemyhit.play()
 
 
         
@@ -388,6 +426,9 @@ def update_game():
 
     # Checa colisão com a moeda
     if coin_timer > 0 and not coin.collected and lumberjack.colliderect(coin):
+        if sound_on:
+            sounds.coin.play()
+
         coins_collected += 1
         coin.collected = True
         lumberjack.speed += 0.2
@@ -415,10 +456,10 @@ def on_key_down(key):
             elif action == "option_sound":
                 if sound_on:
                     sound_on = False
-
+                    music.pause()
                 else:
                     sound_on = True
-
+                    music.unpause()
 
 
     if keyboard.escape:
