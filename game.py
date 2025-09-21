@@ -178,8 +178,9 @@ enemy_speed = 0.2    # Velocidade do inimigo
 
 
 # Música do jogo
-
 music.play('music')
+
+
 
 # Game Objects
 # O mapa será constituido de gramas.
@@ -210,6 +211,8 @@ trees = []
 coin_positions = []
 enemy = []
 
+##############################################################################
+# Aqui é calculado posições e criado os Actors para os mapas e mobs do jogo  
 while len(tree_positions) < int( ((WIDTH + HEIGHT)//2) * 0.12):
     position = (random.randint(16, WIDTH), random.randint(32, HEIGHT - 16))
     
@@ -246,23 +249,27 @@ while len(enemy) < 20:
     if position not in tree_positions and position not in coin_positions and position != ((WIDTH  // 2) + 65, (HEIGHT// 2)  + 65):
         enemy.append(Enemy(position))
         
+################################################################################
 
-
-
-# Variáveis globais para moeda e contador
+############################################
+# Variáveis globais para moeda e contador  #
 coin_timer = COIN_TIMER
 fix_position_coin = random.randint(0, len(coin_positions) - 1)
 coins_collected = 0
 coin.pos = random.choice(coin_positions)
+#############################################
 
 
+
+###################################
+# Variáveis globais para Menu     #
 menu_active = True
 menu_items = [
     {"text": "Começar Jogo", "action": "start_game"},
     {"text": "Música e sons : On", "action": "option_sound"},
     {"text": "Sair", "action": "exit_game"}]
 selected_menu = 0
-
+#######################################
 
 
 
